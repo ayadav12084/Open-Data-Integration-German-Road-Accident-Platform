@@ -1,0 +1,217 @@
+openapi: 3.0.0
+info:
+  title: German Accident Atlas Data Integration API
+  version: 1.0.0
+  description: >
+    Harmonized REST API providing analytics and reporting functionality 
+    over the fallback datasets from OPAL
+    
+    Expected Repository Structure for Grading:
+    -----------------------------------------
+    Project
+    ├─ backend
+    │  ├─ accident_per_10000_per_city.csv
+    │  ├─ accident_per_location_2021_in_Schleswig-Holstein.csv
+    │  ├─ accident_per_location_2023.csv
+    │  ├─ accidents_with_persons_per_month.csv
+    │  ├─ ingest.js
+    │  ├─ server.mjs
+    │  ├─ package-lock.json
+    │  └─ package.json
+    ├─ frontend
+    │  ├─ dist/                 # Production build assets served by server.mjs
+    │  ├─ src
+    │  │  ├─ App.css
+    │  │  ├─ App.jsx
+    │  │  ├─ index.css
+    │  │  └─ main.jsx
+    │  ├─ index.html
+    │  ├─ package.json
+    │  └─ vite.config.js
+    ├─ package.json
+    └─ readme.md
+
+servers:
+  - url: http://localhost:5173
+    description: Local Frontend Server
+
+paths:
+  /api/reports/accidents-by-year:
+    get:
+      summary: Get accident counts grouped by year
+      description: Returns a breakdown of total recorded accident events per calendar year.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/reports/top-regions:
+    get:
+      summary: Get the top 10 regions with the highest accident volumes
+      description: Returns the top 10 regions ordered in descending order by aggregate accident volume.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/reports/hourly-pattern:
+    get:
+      summary: Get hourly patterns of accidents
+      description: Groups and counts accidents by the specific hour of the day they occurred.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/reports/road-users:
+    get:
+      summary: Get sum of accidents by involved road user type
+      description: Provides total aggregates of involved road users across all categories (bikes, pedestrians, cars, trucks, motorcycles).
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/answers/earliest-year:
+    get:
+      summary: Q1: Find earliest dataset year available
+      description: Evaluation endpoint returning the minimum year value recorded in the database.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/answers/saxony-2023:
+    get:
+      summary: Q2: Total injury accidents in Saxony for 2023
+      description: Returns total counted personal injury accidents within the federal state of Saxony (AGS prefix 14) during 2023.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/reports/by-ags-prefix:
+    get:
+      summary: Q3/Q4 / Ad-Hoc: Filter regions and accidents by AGS prefix code
+      description: Accepts a numeric AGS code prefix (e.g., '05' for NRW or '13' for MV) to calculate the starting recording year and aggregate volumes securely.
+      parameters:
+        - name: prefix
+          in: query
+          description: Numeric string constraint to match the start of the Amtlicher Gemeindeschlüssel (AGS).
+          required: false
+          schema:
+            type: string
+            pattern: '^\d*$'
+            example: '05'
+      responses:
+        '200':
+          description: Successful execution of ad-hoc dynamic prefix filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Invalid query string configuration (non-numeric input rejected)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/answers/berlin-pedestrians-2023:
+    get:
+      summary: Q5: Pedestrian-involved incidents in Berlin for 2023
+      description: Evaluation endpoint filtering specifically for Berlin (AGS prefix 11) matching pedestrian involvement flags during 2023.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/answers/monthly-advanced-aggregation:
+    get:
+      summary: Q6: Advanced monthly distribution overview
+      description: Groups data by month digit to evaluate simultaneous bike-involved incident trends and total accident patterns over 2023.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  responses:
+    ServerError:
+      description: Database execution or connection pool transaction failure.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    StandardResponse:
+      type: object
+      required:
+        - columns
+        - rows
+      properties:
+        columns:
+          type: array
+          description: Dynamically compiled array list of selected database column fields.
+          items:
+            type: string
+          example: ["year", "accidents"]
+        rows:
+          type: array
+          description: List array collections containing row records mapped as object key-value maps.
+          items:
+            type: object
+          example: [{"year": 2023, "accidents": 3215}]
+          
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Accompanying detailed system issue string context message.
+          example: "Database transaction handling anomaly."
