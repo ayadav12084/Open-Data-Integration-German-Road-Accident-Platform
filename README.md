@@ -1,6 +1,6 @@
 # German Accident Atlas Data Integration Platform
 
-This project provides a harmonized REST API and a frontend dashboard to analyze and report on traffic accident data from the provided OPAL fallback datasets.
+This project provides a harmonized Express Server with API endpoints and a frontend dashboard to analyze and report on traffic accident data from the provided OPAL fallback datasets.
 
 ## Repository Structure
 - `backend/`: Node.js API server, ETL ingestion scripts, and database logic.
